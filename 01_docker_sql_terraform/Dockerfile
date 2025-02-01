@@ -1,27 +1,11 @@
-# Use an official Python image
 FROM python:3.12.8
 
-# Set the working directory in the container
+RUN pip install pandas sqlalchemy psycopg2
+
 WORKDIR /app
-
-# Copy the script and the CSV file into the container
 COPY ingest_data.py ingest_data.py
-COPY taxi_zone_lookup.csv taxi_zone_lookup.csv
 
-# Install dependencies (including dotenv)
-RUN pip install pandas sqlalchemy psycopg2 python-dotenv
-
-# Run the script when the container starts
 ENTRYPOINT [ "python", "ingest_data.py" ]
-
-# Expose the port the app runs on
-EXPOSE 80
-
-
-# docker build -t ingest_data:vxxx .
-# docker run --env-file .env --network="host" ingest_data
-
-
 
 # docker run -it \
 #     -e POSTGRES_USER="root" \

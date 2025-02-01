@@ -26,7 +26,6 @@ def main():
     # create a conn to the DB with sqlalchemy and psycopg2
     engine = create_engine(f'postgresql+psycopg2://{user}:{password}@{host}:{port}/{db}')
 
-
     # read the TAXI_ZONE lookup data and create {the taxi_zone_lookup} table
     df_zones = pd.read_csv(csv_zones)
     df_zones.to_sql(name=taxi_zone_lookup_table_name, con=engine, if_exists='replace')
@@ -35,16 +34,21 @@ def main():
     df_iter = pd.read_csv(csv_trips, iterator=True, chunksize=100000, dtype={"store_and_fwd_flag": str})
     
     df = pd.read_csv(csv_trips, nrows=100)
+    df = next(df_iter)
+    df.lpep_dropoff_datetime = pd.to_datetime(df.lpep_dropoff_datetime)
+    df.lpep_pickup_datetime = pd.to_datetime(df.lpep_pickup_datetime)
     df.head(n=0).to_sql(name=green_tripdata_table_name, con=engine, if_exists='replace')
 
-    while True:
+    # insert the data in chunks into the table in Postgres database
+    for df in df_iter:
         t_start = time()
         
-        df = next(df_iter)
-        df.lpep_dropoff_datetime = pd.to_datetime(df.lpep_dropoff_datetime)
+        # convert to datetime format for the timestamp columns in the data
         df.lpep_pickup_datetime = pd.to_datetime(df.lpep_pickup_datetime)
+        df.lpep_dropoff_datetime = pd.to_datetime(df.lpep_dropoff_datetime)
         
-        df.to_sql(name=green_tripdata_table_name, con=engine, if_exists='append', index=False)
+        # insert the data into the table in the Postgres database
+        df.to_sql(name='green_taxi_data', con=engine, if_exists='append')
 
         t_end = time()
 

@@ -35,20 +35,15 @@ def main():
     df_iter = pd.read_csv(csv_trips, iterator=True, chunksize=100000, dtype={"store_and_fwd_flag": str})
     
     df = pd.read_csv(csv_trips, nrows=100)
-    df = next(df_iter)
-    df.lpep_dropoff_datetime = pd.to_datetime(df.lpep_dropoff_datetime)
-    df.lpep_pickup_datetime = pd.to_datetime(df.lpep_pickup_datetime)
     df.head(n=0).to_sql(name=green_tripdata_table_name, con=engine, if_exists='replace')
 
-    # insert the data in chunks into the table in Postgres database
-    for df in df_iter:
+    while True:
         t_start = time()
         
-        # convert to datetime format for the timestamp columns in the data
-        df.lpep_pickup_datetime = pd.to_datetime(df.lpep_pickup_datetime)
+        df = next(df_iter)
         df.lpep_dropoff_datetime = pd.to_datetime(df.lpep_dropoff_datetime)
+        df.lpep_pickup_datetime = pd.to_datetime(df.lpep_pickup_datetime)
         
-        # insert the data into the table in the Postgres database
         df.to_sql(name=green_tripdata_table_name, con=engine, if_exists='append', index=False)
 
         t_end = time()

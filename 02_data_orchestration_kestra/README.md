@@ -61,9 +61,9 @@ Configure the timezone to New York?
 
 ANSWER --> `America/New_York`
 
-`triggers:
-  - id: daily-schedule
-    type: io.kestra.core.models.triggers.types.Schedule
-    cron: "0 9 * * *"  # Runs every day at 9 AM
-    timezone: "America/New_York"
-`
+```md
+    triggers:
+      - id: daily-schedule
+        type: io.kestra.core.models.triggers.types.Schedule
+        cron: "0 9 * * *"  # Runs every day at 9 AM
+        timezone: "America/New_York"

@@ -1,0 +1,82 @@
+id: ny_taxi_data_pipeline
+namespace: data_engineering
+
+inputs:
+  - name: taxi_type
+    type: STRING
+    required: true
+    description: "Specify taxi type: yellow or green"
+
+  - name: dataset_url
+    type: STRING
+    required: true
+    description: "URL to the dataset"
+
+  - name: gcs_bucket
+    type: STRING
+    required: true
+    description: "Google Cloud Storage bucket name"
+
+  - name: bq_project
+    type: STRING
+    required: true
+    description: "BigQuery Project ID"
+
+  - name: bq_dataset
+    type: STRING
+    required: true
+    description: "BigQuery Dataset Name"
+
+variables:
+  temp_file: "/tmp/{{inputs.taxi_type}}_taxi_data.csv"
+  gcs_path: "gs://{{inputs.gcs_bucket}}/{{inputs.taxi_type}}_taxi_data.csv"
+  bq_table: "{{inputs.bq_project}}.{{inputs.bq_dataset}}.{{inputs.taxi_type}}_taxi"
+
+flow:
+  - id: set_label
+    type: io.kestra.core.tasks.debugs.Log
+    message: "Processing {{inputs.taxi_type}} taxi data"
+
+  - id: extract
+    type: io.kestra.plugin.fs.http.Download
+    url: "{{inputs.dataset_url}}"
+    destination: "{{vars.temp_file}}"
+
+  - id: upload_to_gcs
+    type: io.kestra.plugin.gcp.gcs.Upload
+    bucket: "{{inputs.gcs_bucket}}"
+    from: "{{vars.temp_file}}"
+    destination: "{{vars.gcs_path}}"
+
+  - id: create_bq_table
+    type: io.kestra.plugin.gcp.bigquery.TableCreate
+    project: "{{inputs.bq_project}}"
+    dataset: "{{inputs.bq_dataset}}"
+    table: "{{inputs.taxi_type}}_taxi"
+    schema:
+      - name: vendor_id
+        type: STRING
+      - name: pickup_datetime
+        type: TIMESTAMP
+      - name: dropoff_datetime
+        type: TIMESTAMP
+      - name: passenger_count
+        type: INTEGER
+      - name: trip_distance
+        type: FLOAT
+      - name: fare_amount
+        type: FLOAT
+
+  - id: load_data_to_bq
+    type: io.kestra.plugin.gcp.bigquery.Load
+    project: "{{inputs.bq_project}}"
+    dataset: "{{inputs.bq_dataset}}"
+    table: "{{inputs.taxi_type}}_taxi"
+    sourceUris:
+      - "{{vars.gcs_path}}"
+    sourceFormat: "CSV"
+    writeDisposition: "WRITE_TRUNCATE"
+
+  - id: log_completion
+    type: io.kestra.core.tasks.debugs.Log
+    message: "{{inputs.taxi_type}} taxi data successfully loaded into BigQuery!"
